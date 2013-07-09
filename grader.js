@@ -48,32 +48,26 @@ var assertUrl = function(inurl) {
     return instr;
 };
 
-var getResponder = function(checksfile, htmlfile) {
+var getResponder = function(checksfile) {
     var responder = function(result, response) {
         if (result instanceof Error) {
             console.error('Error: ' + util.format(response.message));
             process.exit(1);
         } else {
-            fs.writeFileSync(htmlfile, result);
-            var checkJson = checkHtmlFile(htmlfile, checksfile);
+            var checkJson = checkHtmlFile(result, checksfile);
             var outJson = JSON.stringify(checkJson, null, 4);
             console.log(outJson);
-            fs.unlinkSync(htmlfile)
         }
     };
     return responder;
-};
-
-var cheerioHtmlFile = function(htmlfile) {
-    return cheerio.load(fs.readFileSync(htmlfile));
 };
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkHtmlFile = function(htmlData, checksfile) {
+    $ = cheerio.load(htmlData);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -97,11 +91,12 @@ if(require.main == module) {
         .parse(process.argv);
 
     if(!program.url) {
-       var checkJson = checkHtmlFile(program.file, program.checks);
+       var htmlData = fs.readFileSync(program.file);
+       var checkJson = checkHtmlFile(htmlData, program.checks);
        var outJson = JSON.stringify(checkJson, null, 4);
        console.log(outJson);
     } else {
-       var urlResponder = getResponder(program.checks, "downloa2temp.html");
+       var urlResponder = getResponder(program.checks);
        rest.get(program.url).on('complete', urlResponder);
     }
 } else {
